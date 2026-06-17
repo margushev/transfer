@@ -1,0 +1,25 @@
+import boto3
+import os
+
+s3 = boto3.client("s3")
+
+SOURCE_BUCKET = os.environ["SOURCE_BUCKET"]
+DESTINATION_BUCKET = os.environ["DESTINATION_BUCKET"]
+DESTINATION_KMS_KEY = os.environ["DESTINATION_KMS_KEY_ARN"]
+
+def handler(event, context):
+    paginator = s3.get_paginator("list_objects_v2")
+    copied = 0
+
+    for page in paginator.paginate(Bucket=SOURCE_BUCKET):
+        for obj in page.get("Contents", []):
+            s3.copy_object(
+                CopySource={"Bucket": SOURCE_BUCKET, "Key": obj["Key"]},
+                Bucket=DESTINATION_BUCKET,
+                Key=obj["Key"],
+                ServerSideEncryption="aws:kms",
+                SSEKMSKeyId=DESTINATION_KMS_KEY,
+            )
+            copied += 1
+
+    return {"copied": copied}
