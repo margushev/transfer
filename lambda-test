@@ -1,0 +1,13 @@
+  # 1. Get the subnets + SGs the function actually uses
+  aws lambda get-function-configuration --function-name YOUR_FN \
+    --query 'VpcConfig.{Subnets:SubnetIds,SGs:SecurityGroupIds}'
+
+  # 2. For those subnets, see what routes exist (NAT? S3 prefix list?)
+  aws ec2 describe-route-tables \
+    --filters "Name=association.subnet-id,Values=SUBNET_A,SUBNET_B" \
+    --query 'RouteTables[].Routes[].{Dest:DestinationCidrBlock,PL:DestinationPrefixListId,NAT:NatGatewayId,GW:GatewayId,VPCE:VpcEndpointId}' --output table
+
+  # 3. See which S3 endpoints exist and their type
+  aws ec2 describe-vpc-endpoints \
+    --filters "Name=service-name,Values=com.amazonaws.us-east-1.s3" \
+    --query 'VpcEndpoints[].{Type:VpcEndpointType,State:State,RTs:RouteTableIds,Subnets:SubnetIds,PrivDNS:PrivateDnsEnabled}' --output table
